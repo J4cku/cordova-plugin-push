@@ -81,11 +81,8 @@ NSString *const pushPluginApplicationDidBecomeActiveNotification = @"pushPluginA
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
     NSLog(@"didReceiveNotification with fetchCompletionHandler");
 
-    // app is in the background or inactive, so only call notification callback if this is a silent push
-    if (application.applicationState != UIApplicationStateActive) {
-
         NSLog(@"app in-active");
-
+        Boolean appActive = application.applicationState == UIApplicationStateActive;
         // do some convoluted logic to find out if this should be a silent push.
         long silent = 0;
         id aps = [userInfo objectForKey:@"aps"];
@@ -96,7 +93,7 @@ NSString *const pushPluginApplicationDidBecomeActiveNotification = @"pushPluginA
             silent = [contentAvailable integerValue];
         }
 
-        if (silent == 1) {
+        if (silent == 1 || appActive) {
             NSLog(@"this should be a silent push");
             void (^safeHandler)(UIBackgroundFetchResult) = ^(UIBackgroundFetchResult result){
                 dispatch_async(dispatch_get_main_queue(), ^{
@@ -120,7 +117,7 @@ NSString *const pushPluginApplicationDidBecomeActiveNotification = @"pushPluginA
             }
 
             pushHandler.notificationMessage = userInfo;
-            pushHandler.isInline = NO;
+            pushHandler.isInline = appActive;
             [pushHandler notificationReceived];
         } else {
             NSLog(@"just put it in the shade");
@@ -128,10 +125,6 @@ NSString *const pushPluginApplicationDidBecomeActiveNotification = @"pushPluginA
             self.launchNotification = userInfo;
             completionHandler(UIBackgroundFetchResultNewData);
         }
-
-    } else {
-        completionHandler(UIBackgroundFetchResultNoData);
-    }
 }
 
 - (void)checkUserHasRemoteNotificationsEnabledWithCompletionHandler:(nonnull void (^)(BOOL))completionHandler
